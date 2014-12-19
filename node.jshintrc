@@ -1,0 +1,12 @@
+{
+    "devel": true,
+    "globals": {
+        "afterEach": false,
+        "beforeEach": false,
+        "describe": false,
+        "it": false
+    },
+    "node": true,
+    "undef": true,
+    "sub": true
+}

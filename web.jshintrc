@@ -1,0 +1,6 @@
+{
+    "evil": false,
+    "multistr": true,
+    "sub": true,
+    "undef": true
+}

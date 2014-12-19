@@ -1,0 +1,74 @@
+{
+    "requireCurlyBraces": [
+        "for",
+        "while",
+        "do",
+        "try",
+        "catch",
+        "case",
+        "default"
+    ],
+    "requireSpaceAfterKeywords": [
+        "do",
+        "for",
+        "if",
+        "else",
+        "switch",
+        "case",
+        "try",
+        "catch",
+        "void",
+        "while",
+        "return",
+        "typeof",
+        "function"
+    ],
+    "requireSpaceBeforeBlockStatements": true,
+    "requireSpacesInConditionalExpression": true,
+    "requireSpacesInNamedFunctionExpression": {
+    	"beforeOpeningCurlyBrace": true
+    },
+    "disallowSpacesInNamedFunctionExpression": {
+    	"beforeOpeningRoundBrace": true
+    },
+    "requireSpacesInFunctionDeclaration": {
+    	"beforeOpeningCurlyBrace": true
+    },
+    "disallowSpacesInFunctionDeclaration": {
+    	"beforeOpeningRoundBrace": true
+    },
+    "disallowSpacesInCallExpression": true,
+    "disallowMultipleVarDecl": true,
+    "requireBlocksOnNewline": true,
+    "disallowPaddingNewlinesInBlocks": true,
+    "disallowSpacesInsideArrayBrackets": "all",
+    "disallowSpacesInsideParentheses": true,
+    "disallowQuotedKeysInObjects": "allButReserved",
+    "disallowSpaceAfterObjectKeys": true,
+    "requireSpaceBeforeObjectValues": true,
+    "requireCommaBeforeLineBreak": true,
+    "requireOperatorBeforeLineBreak": true,
+    "disallowSpaceAfterPrefixUnaryOperators": true,
+    "disallowSpaceBeforePostfixUnaryOperators": true,
+    "requireSpaceBeforeBinaryOperators": true,
+    "requireSpaceAfterBinaryOperators": true,
+    "disallowImplicitTypeConversion": ["numeric", "boolean", "binary"],
+    "disallowKeywords": ["with"],
+    "disallowMixedSpacesAndTabs": true,
+    "disallowTrailingWhitespace": true,
+    "disallowKeywordsOnNewLine": ["catch"],
+    "requireKeywordsOnNewLine": ["do", "for", "if", "while"],
+    "requireLineFeedAtFileEnd": true,
+    "maximumLineLength": 80,
+    "requireCapitalizedConstructors": true,
+    "requireSpaceAfterLineComment": true,
+    "disallowNewlineBeforeBlockStatements": true,
+    "validateIndentation": 4,
+    "validateParameterSeparator": ", ",
+    "requireParenthesesAroundIIFE": true,
+    "requireSpacesInAnonymousFunctionExpression": {
+        "beforeOpeningRoundBrace": true,
+        "beforeOpeningCurlyBrace": true
+    },
+    "validateLineBreaks": "LF"
+}
