@@ -2,7 +2,7 @@
 
 from os import getcwd, listdir
 from os.path import exists, isfile, join, splitext
-from subprocess import call
+from subprocess import call, check_output
 from sys import stderr
 
 
@@ -12,10 +12,10 @@ def main():
         stderr.write("No lint script found at '" + lint_path + "'!\n")
         return
 
-    current_directory = getcwd()
-    files = [f for f in listdir(current_directory) if
-             isfile(join(current_directory, f))]
-    for f in files:
+    changed_file_output = check_output(["git", "diff", "--name-only",
+                                        "--staged", "--diff-filter=ABCM"])
+    changed_file_list = map(bytes.decode, changed_file_output.split())
+    for f in changed_file_list:
         root, ext = splitext(f)
         if ext == ".py":
             print(f + " is a Python file.")
