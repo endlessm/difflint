@@ -18,3 +18,5 @@ else
     jscs "$file_to_lint"
     jshint "$file_to_lint"
 fi
+
+exit 0
