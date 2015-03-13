@@ -11,6 +11,18 @@ from sys import stderr
 LOG_FILE = "lintdiff.log"
 LINT_PATH = "/usr/bin/lint.sh"
 
+class LintOutput(object):
+    def __init__(self, output, warning_boolean):
+        self.output = output
+        self._warnings_present = warning_boolean # private
+    
+    def has_warnings(self):
+        return self._warnings_present
+
+    def get_split_output(self):
+        return self.output.splitlines(keepends=True)
+
+
 def lint_list(file_list):
     '''
     Lints every file within file list with a linter
@@ -21,26 +33,52 @@ def lint_list(file_list):
     Input: A list of filenames containing no duplicates.
 
     Returns: A mapping of filenames to their linted
-             output and whether or not there were any
-             warnings.
+             output as a LintOutput object.
     '''
-    # Mapping of {filename : [linting output, warnings boolean]}
+    # Mapping of {filename : LintOutput}
     lint_mapping = {}
 
     for f in file_list:
         root, ext = splitext(f)
         if ext == ".js":
-            lint_output = None
+            lint_output_bytes = None
             warnings_present = False
             try:
-                lint_output = check_output([LINT_PATH, f])
+                lint_output_bytes = check_output([LINT_PATH, f])
             except CalledProcessError as e:
                 warnings_present = True
-                lint_output = e.output
-            lint_mapping[f] = [lint_output.decode(), warnings_present]
+                lint_output_bytes = e.output
+            lint_mapping[f] = LintOutput(lint_output_bytes.decode(),
+                                         warnings_present)
         # TODO: Other file extensions/linters will be added here.
 
     return lint_mapping
+
+def build_rename_dict():
+    '''Builds a dictonary containing the new filenames renamed files
+    are being changed to, mapped to their original names.
+
+    Input: (none)
+    Output: A dictionary of the form {new_name : old_name}
+    '''
+    git_diff_output = check_output(["git", "diff", "--name-status",
+                                    "--staged", "--find-renames",
+                                    "--diff-filter=R"])
+    # Has the format:
+    #
+    # R<NUM> <old-name> <new-name>
+    #
+    # where <NUM> is the similarity index between those two
+    # files.
+
+    rename_lines = list(git_diff_output.decode().split('\n'))
+    new_to_old = {}
+    for line in rename_lines:
+        if line == '':
+            break
+        line_as_list = line.split("\t")
+        new_to_old[line_as_list[2]] = line_as_list[1]
+    return new_to_old
 
 def build_file_list(mode_string):
     '''Builds a list containing the files matching the qualities
@@ -55,13 +93,108 @@ def build_file_list(mode_string):
     Output: A list of filenames that matched the git diff-filter
             criteria.'''
     git_diff_output = check_output(["git", "diff", "--name-only",
-                                    "--staged",
+                                    "--staged", "--find-renames",
                                     "--diff-filter=" + mode_string])
     return list(git_diff_output.decode().split())
 
-def main():
+def lint_script_exists():
+    '''Checks to see if the file specified by LINT_PATH exists.
+    Writes an error message to stderr and returns False if it
+    does not. Otherwise returns True.'''
     if not exists(LINT_PATH):
         stderr.write("No lint script found at '" + LINT_PATH + "'!\n")
+        return False
+    return True
+
+def get_log_header():
+    '''Returns a string header to be used with the log file
+    containing the current date in a readable format.'''
+    return str(datetime.utcnow().isoformat(" ")) + "\n"
+
+def diff_lint_outputs(past_mapping, current_mapping, log_output,
+                      rename_mapping={}):
+    '''Performs a diff of the linting outputs from two different
+    dictionaries of files. Outputs with the same keys will be
+    compared. The logging details will be output to a StringIO
+    object, called log_output.
+
+    Input: 
+        past_mapping: Dictionary of the form
+            {filename, LintOutput}
+        current_mapping: Dictionary of the form
+            {filename, LintOutput}
+        log_output: StringIO object to receive logging messages if
+            new linting warnings/errors were introduced.
+        rename_mapping: (optional) Dictionary of the form
+            {new_filename : old_filename}
+
+    Output: True if new errors or warnings were introduced; False
+            otherwise.
+    '''
+    any_errors_introduced = False
+    for new_name, lint_output in current_mapping.items():
+        old_name = rename_mapping.get(new_name, new_name)
+        if current_mapping[new_name] == past_mapping[old_name]:
+            continue
+        any_errors_introduced = True
+        old_strings = past_mapping[old_name].get_split_output()
+        new_strings = current_mapping[new_name].get_split_output()
+        delta_generator = unified_diff(old_strings, new_strings,
+                                       fromfile=old_name, tofile=new_name,
+                                       n=0) # No lines of context
+        log_output.write("\n\n\n")
+        log_output.writelines(delta_generator)
+    return any_errors_introduced
+
+def report_defects_in_new_files(added_mapping, log_output):
+    '''Checks the given dictionary for any warning_booleans that have
+    been set. If any are found, their corresponding linting output
+    will be reported to the log_output.
+
+    Inputs:
+        added_mapping: Dictionary of the form
+            {filename, LintOutput}
+        log_output: StringIO object to receive logging messages if
+            new linting warnings/errors were introduced.
+
+    Output:
+        True if warnings or errors were introduced; False otherwise.
+    '''
+    any_errors_introduced = False
+    for filename, lint_output in added_mapping.items():
+        if not lint_output.has_warnings():
+            continue
+        any_errors_introduced = True
+        log_output.write("\n\n\n")
+        log_output.write(filename + "\n")
+        log_output.write(lint_output.output)
+    return any_errors_introduced
+
+def finalize_log_output(log_output, any_new_errors):
+    '''Writes the contents of the log_output to the LOG_FILE and
+    prints a notice to stderr if any_new_errors is True. Deletes
+    any existing LOG_FILE if any_new_errors is False.
+
+    Inputs:
+        log_output: A StringIO of linting warnings/errors.
+        any_new_errors: A boolean indicating whether any
+                        errors were introduced.
+    Outputs: None'''
+    if not any_new_errors:
+        try:
+            unlink(LOG_FILE)
+        except FileNotFoundError:
+            pass
+    else:
+        stderr.write("NOTICE: Check " + LOG_FILE +
+                     " for linting error details.\n")
+        with open(LOG_FILE, 'w') as f:
+            f.write(get_log_header())
+            f.write(log_output.getvalue())
+    log_output.close()
+
+def main():
+    if not lint_script_exists():
         return
 
     # Put all changes made that *are not* being committed in the stash.
@@ -78,6 +211,15 @@ def main():
     added_file_list = build_file_list("A")
     added_lint_mapping = lint_list(added_file_list)
 
+    # Build a dictionary containing the new filenames of renamed files
+    # mapped to the output obtained from linting them.
+    current_renamed_file_list = build_file_list("R")
+    current_renamed_lint_mapping = lint_list(current_renamed_file_list)
+
+    # We also need a list of the old filenames that the renamed files
+    # have been derived from.
+    new_to_old_rename_mapping = build_rename_dict()
+
     # Now, we'll roll back changes that *are* being committed as well to
     # get the baseline linting output.
     call(["git", "stash", "save", "--quiet",
@@ -87,6 +229,9 @@ def main():
     # (We don't try to lint files that were deleted or added in the
     # present.)
     past_modified_lint_mapping = lint_list(changed_file_list)
+
+    old_names_list = list(new_to_old_rename_mapping.values())
+    past_renamed_lint_mapping = lint_list(old_names_list)
 
     # Restore the changes that WILL NOT be committed first.
     call(["git", "stash", "apply", "--index", "--quiet", "stash@{1}"])
@@ -99,57 +244,26 @@ def main():
     call(["git", "stash", "drop", "--quiet"])
 
     # Compare the two linting output dictionaries of copied/modified files.
-    any_errors_introduced = False
     log_output = StringIO()
-    for filename, output in current_modified_lint_mapping.items():
-        if current_modified_lint_mapping[filename] == past_modified_lint_mapping[filename]:
-            print("Changes to " + filename + " introduced no new linting " +
-                  "errors.")
-            continue
-        # If this is the first error, start the LOG_FILE with a timestamp.
-        if not any_errors_introduced:
-            any_errors_introduced = True
-            log_output.write(str(datetime.utcnow().isoformat(" ")) + "\n")
-                
-        print("WARNING: Changes to " + filename + " introduced linting errors!")
-
-        old_strings = past_modified_lint_mapping[filename][0].splitlines(keepends=True)
-        new_strings = current_modified_lint_mapping[filename][0].splitlines(keepends=True)
-        delta_generator = unified_diff(old_strings, new_strings,
-                                       fromfile=filename, tofile=filename,
-                                       n=0) # No lines of context
-        
-        log_output.write("\n\n\n")
-        log_output.writelines(delta_generator)
+    modified_new_errors = diff_lint_outputs(past_modified_lint_mapping,
+                                            current_modified_lint_mapping,
+                                            log_output)
 
     # Check each added file for defects.
-    for filename, output in added_lint_mapping.items():
-        if not output[1]:
-            #output[1] tells us whether any warnings exist.
-            continue
-        if not any_errors_introduced:
-            # Note, this duplicate code will be removed when we go to
-            # single line reporting.
-            any_errors_introduced = True
-            log_output.write(str(datetime.utcnow().isoformat(" ")) + "\n")
+    added_new_errors = report_defects_in_new_files(added_lint_mapping,
+                                                   log_output)
+                  
 
-        print("WARNING: New file " + filename + " has linting errors!")
-        log_output.write("\n\n\n")
-        log_output.write(filename + "\n")
-        log_output.write(output[0])
-
-    # We shouldn't even have a log file if no new errors were introduced.
-    if not any_errors_introduced:
-        try:
-            unlink(LOG_FILE)
-        except FileNotFoundError:
-            pass
-    else:
-        print("NOTICE: Check " + LOG_FILE + " for linting error details.")
-        with open(LOG_FILE, 'w') as f:
-            f.write(log_output.getvalue())
-    log_output.close()
-
+    # Compare the linting outputs of the renamed files.
+    renamed_new_errors = diff_lint_outputs(past_renamed_lint_mapping,
+                                           current_renamed_lint_mapping,
+                                           log_output,
+                                           new_to_old_rename_mapping)
+                 
+    any_new_errors = modified_new_errors or added_new_errors or \
+                     renamed_new_errors
+    finalize_log_output(log_output, any_new_errors)
+    
     # TODO: Accept/Reject based upon diffs matching or not.
 
 if __name__ == "__main__":
