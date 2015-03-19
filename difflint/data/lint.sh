@@ -4,21 +4,20 @@ file_to_lint="$1"
 mode="$2"
 ret=0
 
+JSCS_REPORTER=`python3 -c 'print(__import__("pkg_resources").resource_filename("difflint", "data/jscs_terse_reporter.js"))'`
+
 if [ "$mode" == "node" -o "$mode" == "nodejs" ]
   then
-    echo "Linting assuming node.js"
-    jscs "$file_to_lint" || ret=$?
     NODE_JSHINTRC=`python3 -c 'print(__import__("pkg_resources").resource_filename("difflint", "data/node.jshintrc"))'`
+    jscs "$file_to_lint" --reporter="$JSCS_REPORTER" || ret=$?
     jshint "$file_to_lint" --config="$NODE_JSHINTRC" || ret=$?
 elif [ "$mode" == "web" -o "$mode" == "webjs" ]
   then
-    echo "Linting assuming web (normal) js"
-    jscs "$file_to_lint" || ret=$?
     WEB_JSHINTRC=`python3 -c 'print(__import__("pkg_resources").resource_filename("difflint", "data/web.jshintrc"))'`
+    jscs "$file_to_lint" --reporter="$JSCS_REPORTER" || ret=$?
     jshint "$file_to_lint" --config="$WEB_JSHINTRC" || ret=$?
 else
-    echo "Linting based on closest configuration file"
-    jscs "$file_to_lint" || ret=$?
+    jscs "$file_to_lint" --reporter="$JSCS_REPORTER" || ret=$?
     jshint "$file_to_lint" || ret=$?
 fi
 
