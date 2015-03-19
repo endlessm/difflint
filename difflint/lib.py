@@ -4,6 +4,7 @@ from io import StringIO
 from os import getcwd, listdir, unlink
 from os.path import exists, isfile, join, splitext
 from pkg_resources import resource_filename
+import re
 from subprocess import call, check_output, CalledProcessError
 from sys import stderr
 
@@ -128,15 +129,12 @@ def diff_lint_outputs(past_mapping, current_mapping, log_output,
         rename_mapping: (optional) Dictionary of the form
             {new_filename : old_filename}
 
-    Output: True if new errors or warnings were introduced; False
-            otherwise.
+    Output: None
     '''
-    any_errors_introduced = False
     for new_name, lint_output in current_mapping.items():
         old_name = rename_mapping.get(new_name, new_name)
         if current_mapping[new_name] == past_mapping[old_name]:
             continue
-        any_errors_introduced = True
         old_strings = past_mapping[old_name].get_split_output()
         new_strings = current_mapping[new_name].get_split_output()
         delta_generator = unified_diff(old_strings, new_strings,
@@ -144,7 +142,6 @@ def diff_lint_outputs(past_mapping, current_mapping, log_output,
                                        n=0) # No lines of context
         log_output.write("\n\n\n")
         log_output.writelines(delta_generator)
-    return any_errors_introduced
 
 def report_defects_in_new_files(added_mapping, log_output):
     '''Checks the given dictionary for any warning_booleans that have
@@ -192,6 +189,33 @@ def finalize_log_output(log_output, any_new_errors):
             f.write(get_log_header())
             f.write(log_output.getvalue())
     log_output.close()
+
+def detect_new_diff_lint_errors(log_output):
+    '''Determines if the diff of the linting outputs stored in
+    log_output indicate the introduction of any new errors.
+
+    Input: StringIO object containing the outputs of a diff
+           tool applied to the linting output.
+
+    Output: True if newly introduced errors are found; False
+            otherwise.
+    '''
+    output_by_lines = log_output.getvalue().split("\n")
+
+    # Regex explanation:
+    # - May start with a +
+    # - Contains one or more alphanumerics preceding a period
+    # - Period is followed by one or more alphanumerics
+    # - Followed by a | literal
+    # - Followed by one or more alphanumerics or spaces
+    # - Followed by another | literal
+    # - Followed by one or more alphanumerics or spaces
+    error_regex = re.compile(r"\+?\w+\.\w+\|[\w ]+\|[\w ]+")
+
+    for output_line in output_by_lines:
+        if error_regex.match(output_line):
+            return True
+    return False
 
 def main():
     if not lint_script_exists():
@@ -245,9 +269,8 @@ def main():
 
     # Compare the two linting output dictionaries of copied/modified files.
     log_output = StringIO()
-    modified_new_errors = diff_lint_outputs(past_modified_lint_mapping,
-                                            current_modified_lint_mapping,
-                                            log_output)
+    diff_lint_outputs(past_modified_lint_mapping,
+                      current_modified_lint_mapping, log_output)
 
     # Check each added file for defects.
     added_new_errors = report_defects_in_new_files(added_lint_mapping,
@@ -255,14 +278,13 @@ def main():
                   
 
     # Compare the linting outputs of the renamed files.
-    renamed_new_errors = diff_lint_outputs(past_renamed_lint_mapping,
-                                           current_renamed_lint_mapping,
-                                           log_output,
-                                           new_to_old_rename_mapping)
+    diff_lint_outputs(past_renamed_lint_mapping,
+                      current_renamed_lint_mapping, log_output,
+                      new_to_old_rename_mapping)
                  
-    any_new_errors = modified_new_errors or added_new_errors or \
-                     renamed_new_errors
+    new_diff_lint_errors = detect_new_diff_lint_errors(log_output)
+    any_new_errors = added_new_errors or new_diff_lint_errors
     finalize_log_output(log_output, any_new_errors)
     
-    # TODO: Accept/Reject based upon diffs matching or not.
+    # This is where we could accept or reject commits via return code.
 
