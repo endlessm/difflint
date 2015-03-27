@@ -16,7 +16,7 @@ var compareResults = function (resultA, resultB) {
 
 module.exports = {
     reporter: function (results) {
-        var resultsList = results.splice(); // Shallow copy
+        var resultsList = results.slice(); // Shallow copy
         resultsList.sort(compareResults);
         resultsList.forEach(function (result) {
             console.log(resultToFullMessage(result));
