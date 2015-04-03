@@ -8,7 +8,7 @@ var errorToFullMessage = function (fname, error) {
     return fname + "|" + error.rule + "|" + error.message;
 };
 
-var compareFullMessages = function (errorA, errorB) {
+var compareFullMessages = function (filename, errorA, errorB) {
     var messageA = errorToFullMessage(filename, errorA);
     var messageB = errorToFullMessage(filename, errorB);
     return messageA.localeCompare(messageB);
@@ -18,7 +18,7 @@ module.exports = function (errorsCollection) {
     errorsCollection.forEach(function (errors) {
         var filename = errors.getFilename();
         var errorsList = errors.getErrorList().slice(); // Shallow copy
-        errorsList.sort(compareFullMessages);
+        errorsList.sort(compareFullMessages.bind(null, filename));
         errorsList.forEach(function (error) {
             console.log(errorToFullMessage(filename, error));
         });
