@@ -203,14 +203,23 @@ def detect_new_diff_lint_errors(log_output):
     output_by_lines = log_output.getvalue().split("\n")
 
     # Regex explanation:
-    # - May start with a +
-    # - Contains one or more alphanumerics preceding a period
-    # - Period is followed by one or more alphanumerics
+    # - Starts with a character that isn't a minus.
+    #   (This is either the start of the filename,
+    #   an entire one-character filename or a +
+    #   indicating a new error in a modified file.)
+    #
+    # - Followed by zero or more non-newline characters.
+    #   (This is either the entire filename, the
+    #   remainder of the filename, or nothing.)
+    #
     # - Followed by a | literal
-    # - Followed by one or more alphanumerics or spaces
+    # - Followed by one or more non-newline characters
+    #   (This is the error's name.)
+    #
     # - Followed by another | literal
-    # - Followed by one or more alphanumerics or spaces
-    error_regex = re.compile(r"\+?\w+\.\w+\|[\w ]+\|[\w ]+")
+    # - Followed by one or more non-newline characters
+    #   (This is the error's description.)
+    error_regex = re.compile(r"^[^\-].*\|.+\|.+")
 
     for output_line in output_by_lines:
         if error_regex.match(output_line):
