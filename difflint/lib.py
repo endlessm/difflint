@@ -5,7 +5,7 @@ from os import getcwd, listdir, unlink
 from os.path import exists, isfile, join, splitext
 from pkg_resources import resource_filename
 import re
-from subprocess import call, check_output, CalledProcessError
+from subprocess import call, check_call, check_output, CalledProcessError, DEVNULL
 from sys import stderr
 
 LOG_FILE = "lintdiff.log"
@@ -104,6 +104,18 @@ def lint_script_exists():
     does not. Otherwise returns True.'''
     if not exists(LINT_PATH):
         stderr.write("No lint script found at '" + LINT_PATH + "'!\n")
+        return False
+    return True
+
+def all_files_configured():
+    '''Checks to see if all linting files the lint script expects
+    are present. Relies on the lint script's functionality to check
+    this. Returns True if all files are present, False otherwise.'''
+    try:
+        check_call([LINT_PATH, "--check"], stdout=DEVNULL, stderr=DEVNULL)
+    except CalledProcessError as e:
+        stderr.write("Configuration and/or linting files missing. " +
+                     "Run `lint.sh --check` for a list of missing files.\n")
         return False
     return True
 
@@ -227,7 +239,7 @@ def detect_new_diff_lint_errors(log_output):
     return False
 
 def main():
-    if not lint_script_exists():
+    if not lint_script_exists() or not all_files_configured():
         return
 
     all_staged_files = build_file_list("ACMR")
