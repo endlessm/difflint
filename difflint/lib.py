@@ -230,6 +230,11 @@ def main():
     if not lint_script_exists():
         return
 
+    all_staged_files = build_file_list("ACMR")
+    if not all_staged_files:
+        # No need to lint any files.
+        return
+
     # Put all changes made that *are not* being committed in the stash.
     call(["git", "stash", "save", "--keep-index", "--quiet",
           '"pre-commit hook unstaged changes"'])
