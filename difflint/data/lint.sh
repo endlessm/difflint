@@ -24,6 +24,12 @@ tools and style rules will be used for that file.
                   expects them to be. Displays a message indicating which
                   tools were not found and returns 2. If all tools are found,
                   instead displays a message indicating such and returns 0.
+
+    Exit Codes:
+
+    0 : No errors.
+    1 : Linting errors found.
+    2 : The script has configuration errors or invalid usage.
 EOF
 }
 
@@ -56,6 +62,12 @@ JSHINT_REPORTER=`python3 -c 'print(__import__("pkg_resources").resource_filename
 
 NODE_JSHINTRC=`python3 -c 'print(__import__("pkg_resources").resource_filename("difflint", "data/node.jshintrc"))'`
 WEB_JSHINTRC=`python3 -c 'print(__import__("pkg_resources").resource_filename("difflint", "data/web.jshintrc"))'`
+
+if [[ "$#" == 0 ]]
+  then
+    usage
+    exit 2
+fi
 
 if [ "$1" == "-h" -o "$1" == "--help" ]
   then
