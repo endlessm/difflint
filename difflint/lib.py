@@ -1,15 +1,15 @@
-#!/usr/bin/env python3
-
 from datetime import datetime
 from difflib import unified_diff
 from io import StringIO
 from os import getcwd, listdir, unlink
 from os.path import exists, isfile, join, splitext
+from pkg_resources import resource_filename
 from subprocess import call, check_output, CalledProcessError
 from sys import stderr
 
 LOG_FILE = "lintdiff.log"
-LINT_PATH = "/usr/bin/lint.sh"
+LINT_PATH = resource_filename(__name__, 'data/lint.sh')
+
 
 class LintOutput(object):
     def __init__(self, output, warning_boolean):
@@ -266,5 +266,3 @@ def main():
     
     # TODO: Accept/Reject based upon diffs matching or not.
 
-if __name__ == "__main__":
-    main()
