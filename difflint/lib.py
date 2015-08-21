@@ -15,8 +15,8 @@ LINT_PATH = resource_filename(__name__, 'data/lint.sh')
 class LintOutput(object):
     def __init__(self, output, warning_boolean):
         self.output = output
-        self._warnings_present = warning_boolean # private
-    
+        self._warnings_present = warning_boolean  # private
+
     def has_warnings(self):
         return self._warnings_present
 
@@ -55,6 +55,7 @@ def lint_list(file_list):
 
     return lint_mapping
 
+
 def build_rename_dict():
     '''Builds a dictonary containing the new filenames renamed files
     are being changed to, mapped to their original names.
@@ -81,6 +82,7 @@ def build_rename_dict():
         new_to_old[line_as_list[2]] = line_as_list[1]
     return new_to_old
 
+
 def build_file_list(mode_string):
     '''Builds a list containing the files matching the qualities
     indicated by the mode_string within the current git staging
@@ -98,6 +100,7 @@ def build_file_list(mode_string):
                                     "--diff-filter=" + mode_string])
     return list(git_diff_output.decode().split())
 
+
 def lint_script_exists():
     '''Checks to see if the file specified by LINT_PATH exists.
     Writes an error message to stderr and returns False if it
@@ -106,6 +109,7 @@ def lint_script_exists():
         stderr.write("No lint script found at '" + LINT_PATH + "'!\n")
         return False
     return True
+
 
 def all_files_configured():
     '''Checks to see if all linting files the lint script expects
@@ -119,10 +123,12 @@ def all_files_configured():
         return False
     return True
 
+
 def get_log_header():
     '''Returns a string header to be used with the log file
     containing the current date in a readable format.'''
     return str(datetime.utcnow().isoformat(" ")) + "\n"
+
 
 def diff_lint_outputs(past_mapping, current_mapping, log_output,
                       rename_mapping={}):
@@ -131,7 +137,7 @@ def diff_lint_outputs(past_mapping, current_mapping, log_output,
     compared. The logging details will be output to a StringIO
     object, called log_output.
 
-    Input: 
+    Input:
         past_mapping: Dictionary of the form
             {filename, LintOutput}
         current_mapping: Dictionary of the form
@@ -151,9 +157,10 @@ def diff_lint_outputs(past_mapping, current_mapping, log_output,
         new_strings = current_mapping[new_name].get_split_output()
         delta_generator = unified_diff(old_strings, new_strings,
                                        fromfile=old_name, tofile=new_name,
-                                       n=0) # No lines of context
+                                       n=0)  # No lines of context
         log_output.write("\n\n\n")
         log_output.writelines(delta_generator)
+
 
 def report_defects_in_new_files(added_mapping, log_output):
     '''Checks the given dictionary for any warning_booleans that have
@@ -179,6 +186,7 @@ def report_defects_in_new_files(added_mapping, log_output):
         log_output.write(lint_output.output)
     return any_errors_introduced
 
+
 def finalize_log_output(log_output, any_new_errors):
     '''Writes the contents of the log_output to the LOG_FILE and
     prints a notice to stderr if any_new_errors is True. Deletes
@@ -201,6 +209,7 @@ def finalize_log_output(log_output, any_new_errors):
             f.write(get_log_header())
             f.write(log_output.getvalue())
     log_output.close()
+
 
 def detect_new_diff_lint_errors(log_output):
     '''Determines if the diff of the linting outputs stored in
@@ -237,6 +246,7 @@ def detect_new_diff_lint_errors(log_output):
         if error_regex.match(output_line):
             return True
     return False
+
 
 def main():
     if not lint_script_exists() or not all_files_configured():
@@ -301,16 +311,14 @@ def main():
     # Check each added file for defects.
     added_new_errors = report_defects_in_new_files(added_lint_mapping,
                                                    log_output)
-                  
 
     # Compare the linting outputs of the renamed files.
     diff_lint_outputs(past_renamed_lint_mapping,
                       current_renamed_lint_mapping, log_output,
                       new_to_old_rename_mapping)
-                 
+
     new_diff_lint_errors = detect_new_diff_lint_errors(log_output)
     any_new_errors = added_new_errors or new_diff_lint_errors
     finalize_log_output(log_output, any_new_errors)
-    
-    # This is where we could accept or reject commits via return code.
 
+    # This is where we could accept or reject commits via return code.

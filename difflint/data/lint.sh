@@ -16,7 +16,7 @@ tools and style rules will be used for that file.
     gjs : GNOME JavaScript -- default
     node : Node.js
     web : browser JavaScript
-    
+
     Options:
 
     --help, -h : Display this usage information and exit.

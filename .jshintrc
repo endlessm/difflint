@@ -17,7 +17,7 @@
         "spyOn",
         "window",
         "xdescribe",
-        "xit"  
+        "xit"
     ],
     "sub": true,
     "undef": true
