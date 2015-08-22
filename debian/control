@@ -1,0 +1,23 @@
+Source: difflint
+Section: devel
+Priority: optional
+Maintainer: Devin Ekins <devinj.ekins@gmail.com>
+Build-Depends: debhelper (>= 9~),
+               dh-python,
+               python3-all,
+               python3-setuptools
+Standards-Version: 3.9.4
+Homepage: https://github.com/endlessm/difflint
+Vcs-Git: https://github.com/endlessm/difflint.git
+Vcs-Browser: https://github.com/endlessm/difflint
+X-Python3-Version: >= 3.2
+
+Package: python3-difflint
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends}
+Description: Linter that will examine only new changes as you commit them
+ Do you have a codebase with inconsistent code style, and you want to start
+ checking your commits with a linter; but you don't want to rewrite the entire
+ repository, since it will mess up your history and the ability to git bisect?
+ Difflint will check only the changes that you make in each commit. It's
+ suitable for using as a Git pre-commit hook.
