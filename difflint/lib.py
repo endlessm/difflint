@@ -2,29 +2,14 @@ import argparse
 from datetime import datetime
 from difflib import unified_diff
 from io import StringIO
-from os import getcwd, listdir, unlink
-from os.path import isfile, join, splitext
-from pkg_resources import resource_filename
+from os import unlink
 import re
-from subprocess import call, check_call, check_output, CalledProcessError, DEVNULL
+from subprocess import call, check_output
 from sys import stderr
 
-from .lint import get_missing_linters
+from .lint import get_missing_linters, lint
 
 LOG_FILE = "lintdiff.log"
-LINT_PATH = resource_filename(__name__, 'data/lint.sh')
-
-
-class LintOutput(object):
-    def __init__(self, output, warning_boolean):
-        self.output = output
-        self._warnings_present = warning_boolean  # private
-
-    def has_warnings(self):
-        return self._warnings_present
-
-    def get_split_output(self):
-        return self.output.splitlines(keepends=True)
 
 
 def lint_list(file_list):
@@ -39,24 +24,7 @@ def lint_list(file_list):
     Returns: A mapping of filenames to their linted
              output as a LintOutput object.
     '''
-    # Mapping of {filename : LintOutput}
-    lint_mapping = {}
-
-    for f in file_list:
-        root, ext = splitext(f)
-        if ext == ".js":
-            lint_output_bytes = None
-            warnings_present = False
-            try:
-                lint_output_bytes = check_output([LINT_PATH, f])
-            except CalledProcessError as e:
-                warnings_present = True
-                lint_output_bytes = e.output
-            lint_mapping[f] = LintOutput(lint_output_bytes.decode(),
-                                         warnings_present)
-        # TODO: Other file extensions/linters will be added here.
-
-    return lint_mapping
+    return {f: lint(f) for f in file_list}
 
 
 def build_rename_dict():
