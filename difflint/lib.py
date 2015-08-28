@@ -1,12 +1,15 @@
+import argparse
 from datetime import datetime
 from difflib import unified_diff
 from io import StringIO
 from os import getcwd, listdir, unlink
-from os.path import exists, isfile, join, splitext
+from os.path import isfile, join, splitext
 from pkg_resources import resource_filename
 import re
 from subprocess import call, check_call, check_output, CalledProcessError, DEVNULL
 from sys import stderr
+
+from .lint import get_missing_linters
 
 LOG_FILE = "lintdiff.log"
 LINT_PATH = resource_filename(__name__, 'data/lint.sh')
@@ -99,29 +102,6 @@ def build_file_list(mode_string):
                                     "--staged", "--find-renames",
                                     "--diff-filter=" + mode_string])
     return list(git_diff_output.decode().split())
-
-
-def lint_script_exists():
-    '''Checks to see if the file specified by LINT_PATH exists.
-    Writes an error message to stderr and returns False if it
-    does not. Otherwise returns True.'''
-    if not exists(LINT_PATH):
-        stderr.write("No lint script found at '" + LINT_PATH + "'!\n")
-        return False
-    return True
-
-
-def all_files_configured():
-    '''Checks to see if all linting files the lint script expects
-    are present. Relies on the lint script's functionality to check
-    this. Returns True if all files are present, False otherwise.'''
-    try:
-        check_call([LINT_PATH, "--check"], stdout=DEVNULL, stderr=DEVNULL)
-    except CalledProcessError as e:
-        stderr.write("Configuration and/or linting files missing. " +
-                     "Run `lint.sh --check` for a list of missing files.\n")
-        return False
-    return True
 
 
 def get_log_header():
@@ -249,7 +229,26 @@ def detect_new_diff_lint_errors(log_output):
 
 
 def main():
-    if not lint_script_exists() or not all_files_configured():
+    parser = argparse.ArgumentParser(description='Linter that will examine ' +
+                                     'only new changes as you commit them.')
+    parser.add_argument('-c', '--check', action='store_true',
+                        help='Checks to see if all linting tools are in the ' +
+                        'PATH. If some are missing, reports which ones and ' +
+                        'returns 2.')
+    args = parser.parse_args()
+
+    missing_files = get_missing_linters()
+
+    if args.check:
+        if not missing_files:
+            print('All configuration files and linting programs found.')
+            return 0
+        print(', '.join(missing_files) + ' not found.')
+        return 2
+
+    if missing_files:
+        stderr.write('Configuration and/or linting files missing. ' +
+                     'Run `difflint --check` for a list of missing files.\n')
         return
 
     all_staged_files = build_file_list("ACMR")

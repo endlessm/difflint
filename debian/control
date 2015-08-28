@@ -10,7 +10,7 @@ Standards-Version: 3.9.4
 Homepage: https://github.com/endlessm/difflint
 Vcs-Git: https://github.com/endlessm/difflint.git
 Vcs-Browser: https://github.com/endlessm/difflint
-X-Python3-Version: >= 3.2
+X-Python3-Version: >= 3.3
 
 Package: python3-difflint
 Architecture: all
