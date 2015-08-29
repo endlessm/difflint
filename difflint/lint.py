@@ -3,7 +3,9 @@
 import os.path
 from pkg_resources import resource_filename
 import shutil
-import subprocess
+
+from .lint_output import LintOutput
+from .lint_python import PythonLintOutput
 
 
 def get_missing_linters():
@@ -14,31 +16,6 @@ def get_missing_linters():
     """
     REQUIRED = ('jscs', 'jshint')
     return [cmd for cmd in REQUIRED if shutil.which(cmd) is None]
-
-
-class LintOutput(object):
-    """Encapsulate linter output from multiple linters."""
-
-    def __init__(self):
-        self.output = ''
-        self._warnings_present = False
-
-    def has_warnings(self):
-        """Return whether any linters indicated errors or warnings."""
-        return self._warnings_present
-
-    def get_split_output(self):
-        """Return the linter output as an array of strings."""
-        return self.output.splitlines(keepends=True)
-
-    def run_command(self, args):
-        """Run the given linter command and capture its output and exit code."""
-        try:
-            output_bytes = subprocess.check_output(args)
-        except subprocess.CalledProcessError as e:
-            output_bytes = e.output
-            self._warnings_present = True
-        self.output += output_bytes.decode()
 
 
 def _lint_javascript(file_to_lint):
@@ -55,6 +32,13 @@ def _lint_javascript(file_to_lint):
     return output
 
 
+def _lint_python(file_to_lint):
+    output = PythonLintOutput()
+    output.lint_pep8(file_to_lint)
+    output.lint_pyflakes(file_to_lint)
+    return output
+
+
 def lint(file_to_lint):
     """Perform linting on a file according to its extension.
 
@@ -66,5 +50,7 @@ def lint(file_to_lint):
 
     if ext == '.js':
         return _lint_javascript(file_to_lint)
+    if ext == '.py':
+        return _lint_python(file_to_lint)
 
     # TODO: Other file extensions/linters will be added here.

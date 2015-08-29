@@ -13,6 +13,8 @@ It's suitable for using as a Git pre-commit hook.
 
 - [JSCS](http://jscs.info) (JavaScript)
 - [JSHint](http://jshint.com/docs) (JavaScript)
+- [PEP8](https://pypi.python.org/pypi/pep8) (Python)
+- [PyFlakes](https://pypi.python.org/pypi/pyflakes) (Python)
 
 ## Requirements ##
 
