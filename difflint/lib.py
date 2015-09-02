@@ -10,6 +10,7 @@ from sys import stderr
 from .lint import get_missing_linters, lint
 
 LOG_FILE = "lintdiff.log"
+MISSING_FILE_EXIT_CODE = 72  # os.EX_OSFILE is not portable
 
 
 def lint_list(file_list):
@@ -201,8 +202,7 @@ def main():
                                      'only new changes as you commit them.')
     parser.add_argument('-c', '--check', action='store_true',
                         help='Checks to see if all linting tools are in the ' +
-                        'PATH. If some are missing, reports which ones and ' +
-                        'returns 2.')
+                        'PATH. If some are missing, reports which ones.')
     args = parser.parse_args()
 
     missing_files = get_missing_linters()
@@ -212,17 +212,17 @@ def main():
             print('All configuration files and linting programs found.')
             return 0
         print(', '.join(missing_files) + ' not found.')
-        return 2
+        return MISSING_FILE_EXIT_CODE
 
     if missing_files:
         stderr.write('Configuration and/or linting files missing. ' +
                      'Run `difflint --check` for a list of missing files.\n')
-        return
+        return 0
 
     all_staged_files = build_file_list("ACMR")
     if not all_staged_files:
         # No need to lint any files.
-        return
+        return 0
 
     # Put all changes made that *are not* being committed in the stash.
     call(["git", "stash", "save", "--keep-index", "--quiet",
@@ -289,3 +289,4 @@ def main():
     finalize_log_output(log_output, any_new_errors)
 
     # This is where we could accept or reject commits via return code.
+    return 0
