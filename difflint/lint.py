@@ -41,44 +41,30 @@ class LintOutput(object):
         self.output += output_bytes.decode()
 
 
-def _lint_javascript(file_to_lint, mode=None):
+def _lint_javascript(file_to_lint):
     output = LintOutput()
     jscs = shutil.which('jscs')
     output.run_command([jscs, file_to_lint, '--reporter',
                         resource_filename(__name__,
                                           'data/jscs_terse_reporter.js')])
 
-    config = []
-    if mode in ['node', 'nodejs']:
-        config = ['--config',
-                  resource_filename(__name__, 'data/node.jshintrc')]
-    elif mode in ['web', 'webjs']:
-        config = ['--config', resource_filename(__name__, 'data/web.jshintrc')]
-
     jshint = shutil.which('jshint')
     output.run_command([jshint, file_to_lint, '--reporter',
                         resource_filename(__name__,
-                                          'data/jshint_terse_reporter.js')] +
-                       config)
+                                          'data/jshint_terse_reporter.js')])
     return output
 
 
-def lint(file_to_lint, mode=None):
+def lint(file_to_lint):
     """Perform linting on a file according to its extension.
-
-    If multiple styles or languages are possible with a given extension, an
-    optional mode may be given to specify which linting tools and style rules
-    will be used for that file.
 
     Inputs:
         file_to_lint: Path to a file to lint, as a string.
-        mode: An optional string indicating a particular variant of a language
-            to configure the appropriate linter with.
     Output: A LintOutput object with linting results.
     """
     root, ext = os.path.splitext(file_to_lint)
 
     if ext == '.js':
-        return _lint_javascript(file_to_lint, mode)
+        return _lint_javascript(file_to_lint)
 
     # TODO: Other file extensions/linters will be added here.
