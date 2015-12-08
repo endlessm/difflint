@@ -14,6 +14,8 @@ setup(name='difflint', version='0.0.0',
           ],
       },
 
+      install_requires=['pep8', 'pyflakes'],
+
       # Metadata
       author='Devin Ekins',
       author_email='devinj.ekins@gmail.com',
