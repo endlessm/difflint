@@ -28,7 +28,9 @@ It's suitable for using as a Git pre-commit hook.
 - Clone this repository, and run `python3 setup.py install`.
 - Install Difflint as a pre-commit hook by adding a line saying
   `difflint` to `.git/hooks/pre-commit` in the project that you want to
-  lint. (Create the `.git/hooks/pre-commit` file if it doesn't exist.)
+  lint.
+  (Create the `.git/hooks/pre-commit` file if it doesn't exist.
+  For Windows add `#!/bin/sh` first.)
   _You can set this up automatically for new git clones by putting it in
   your [Git template](http://git-scm.com/docs/git-init)._
 - Install JSCS and JSHint with `npm install -g jscs` and `npm install -g jshint`.
