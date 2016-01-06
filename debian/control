@@ -5,6 +5,7 @@ Maintainer: Devin Ekins <devinj.ekins@gmail.com>
 Build-Depends: debhelper (>= 9~),
                dh-python,
                python3-all,
+               python3-pep8,
                python3-pyflakes,
                python3-setuptools
 Standards-Version: 3.9.4
