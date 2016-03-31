@@ -18,7 +18,7 @@ It's suitable for using as a Git pre-commit hook.
 
 ## Requirements ##
 
-- Python 3.3 or later
+- Python 3.5 or later
 - JSCS
 - JSHint
 - NPM for installing JSCS and JSHint

@@ -2,9 +2,11 @@ import argparse
 from datetime import datetime
 from difflib import unified_diff
 from io import StringIO
-from os import unlink
+from os import getcwd, unlink
+import os.path
+import pathlib
 import re
-from subprocess import call, check_output
+from subprocess import call, CalledProcessError, check_output, DEVNULL
 from sys import stderr
 
 from .lint import get_missing_configuration_files, get_missing_linters, lint
@@ -12,14 +14,32 @@ from .lint import get_missing_configuration_files, get_missing_linters, lint
 LOG_FILE = 'lintdiff.log'
 MISSING_FILE_EXIT_CODE = 72  # os.EX_OSFILE is not portable
 
+def repo_root():
+    """Returns the root of the current repository. This is the directory
+    containing the .git directory for this repository.
+
+    Input: None
+
+    Output: A pathlib.Path object representing the root of this repository.
+    """
+    directory = pathlib.Path.cwd()
+    while directory.parent != directory.root:
+        if (directory / '.git').is_dir():
+            return directory
+        directory = directory.parent
+
+    raise FileNotFoundError("Could not find .git folder in any ancestor" +
+                            " directory.")
+
 def lint_list(file_list):
     """Lint every file in the list with a linter appropriate to its extension.
 
     If no linter exists for that file type, this function will ignore that file.
 
     Input: file_list: A list of filenames containing no duplicates.
-    Returns: A mapping of filenames to their linted output as a LintOutput
-             object.
+
+    Output: A mapping of filenames to their linted output as a LintOutput
+            object.
     """
     return {f: lint(f) for f in file_list}
 
@@ -196,6 +216,58 @@ def detect_new_diff_lint_errors(log_output):
             return True
     return False
 
+def save_merge_state():
+    """Saves the merge state in the event that we're resolving a
+    merge conflict. Stashing will mangle the merge state unless
+    we have saved it ahead of time. The reverse operation to this
+    function is restore_merge_state().
+
+    Special thanks to the overcommit project for solving this
+    problem in a similar context. (https://github.com/brigade/overcommit)
+
+    Inputs: None
+
+    Output: If we were in a merge conflict state, this will return a
+            tuple containing first the merge message, and second the
+            merge commit hash.
+            If we were not in a merge conflict state, this will return a
+            tuple containing first an empty string, and second another
+            empty string.
+    """
+    merge_head_commit_hash = ''
+    try:
+        # This will fail if MERGE_HEAD doesn't exist.
+        merge_head_commit_hash = check_output(['git', 'rev-parse', 'MERGE_HEAD'],
+                                              stderr=DEVNULL).decode()
+    except CalledProcessError:
+        return ('', '')
+
+    merge_msg = ''
+
+    merge_msg_path = repo_root() / '.git' / 'MERGE_MSG'
+    if merge_msg_path.is_file():
+        merge_msg = merge_msg_path.read_text()
+
+    return (merge_msg, merge_head_commit_hash)
+
+def restore_merge_state(merge_msg, merge_head_commit_hash):
+    """Restores the merge state saved by a previous call to
+    save_merge_state(). This function should only be called
+    if save_merge_state() returned a non-empty string.
+
+    Inputs:
+        merge_msg: The saved message from a merge conflict
+
+        merge_head_commit_hash: The hash belonging to the
+            MERGE_HEAD reference.
+
+    Output: None
+    """
+    dot_git = repo_root() / '.git'
+    (dot_git / 'MERGE_MODE').touch(exist_ok=True)
+    (dot_git / 'MERGE_HEAD').write_text(merge_head_commit_hash)
+    (dot_git / 'MERGE_MSG').write_text(merge_msg + '\n')
+
 def main():
     parser = argparse.ArgumentParser(description='Linter that will examine ' +
                                      'only new changes as you commit them.')
@@ -240,6 +312,10 @@ def main():
     if not all_staged_files:
         # No need to lint any files.
         return 0
+
+    # Save any state related to merge conflicts because we will lose them
+    # once we perform any git stashing.
+    merge_msg, merge_hash = save_merge_state()
 
     # Put all changes made that *are not* being committed in the stash.
     call(['git', 'stash', 'save', '--keep-index', '--quiet',
@@ -286,6 +362,11 @@ def main():
     # Remove both stash frames.
     call(['git', 'stash', 'drop', '--quiet'])
     call(['git', 'stash', 'drop', '--quiet'])
+
+    # If the output from our save_merge_state wasn't an empty string,
+    # we need to load the merge conflict state.
+    if merge_hash:
+        restore_merge_state(merge_msg, merge_hash)
 
     # Compare the two linting output dictionaries of copied/modified files.
     log_output = StringIO()
