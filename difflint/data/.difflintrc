@@ -1,0 +1,10 @@
+{
+    "javascript": {
+        "extensions": ["js"],
+        "linters": ["jshint", "jscs"]
+    },
+    "python": {
+        "extensions": ["py", "pyw"],
+        "linters": ["pep8", "pyflakes"]
+    }
+}

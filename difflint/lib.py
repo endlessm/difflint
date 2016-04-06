@@ -7,7 +7,7 @@ import re
 from subprocess import call, check_output
 from sys import stderr
 
-from .lint import get_missing_linters, lint
+from .lint import get_missing_configuration_files, get_missing_linters, lint
 
 LOG_FILE = 'lintdiff.log'
 MISSING_FILE_EXIT_CODE = 72  # os.EX_OSFILE is not portable
@@ -213,17 +213,35 @@ def main():
                         'PATH. If some are missing, reports which ones.')
     args = parser.parse_args()
 
-    missing_files = get_missing_linters()
+    missing_configurations = get_missing_configuration_files()
+    
+    missing_linters = []
+
+    # We cannot find the missing_linters if any required configuration files
+    # are missing.
+    if not missing_configurations:
+        missing_linters = get_missing_linters()
 
     if args.check:
-        if not missing_files:
+        if not missing_linters and not missing_configurations:
             print('All configuration files and linting programs found.')
             return 0
-        print(', '.join(missing_files) + ' not found.')
+        for linter_dict in missing_linters:
+            print('Linter "' + linter_dict['linter'] + ' for the language "' +
+                  linter_dict['language'] + '" is enabled but not found.')
+        for missing_configuration in missing_configurations:
+            print('Configuration file "' + missing_configuration + '"' +
+                  ' is missing.')
         return MISSING_FILE_EXIT_CODE
+    
+    if missing_configurations:
+        stderr.write('Required configuration files missing. ' +
+                     'Run `difflint --check` for a list of missing ' +
+                     'configuration files.\n')
+        return 0
 
-    if missing_files:
-        stderr.write('Configuration and/or linting files missing. ' +
+    if missing_linters:
+        stderr.write('Required linting files missing. ' +
                      'Run `difflint --check` for a list of missing files.\n')
         return 0
 
