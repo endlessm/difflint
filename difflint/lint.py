@@ -37,7 +37,6 @@ def _read_enabled_linters_config():
     with open(_ENABLED_LINTERS_CONFIG, 'r') as config:
         return json.load(config)
 
-
 def get_missing_configuration_files():
     """Check that all mandatory configuration files for difflint are
     in their expected locations.
@@ -52,7 +51,6 @@ def get_missing_configuration_files():
     if not os.path.isfile(_ENABLED_LINTERS_CONFIG):
         missing_configuration_files.append(_ENABLED_LINTERS_CONFIG)
     return missing_configuration_files
-
 
 def get_missing_linters():
     """Check that all enabled linters' external executables (as defined in the 
@@ -75,7 +73,6 @@ def get_missing_linters():
                                         'linter': linter})
     return missing_linters
 
-
 def _lint_jscs(file_to_lint, lint_output):
     jscs = shutil.which('jscs')
     lint_output.run_command([jscs, file_to_lint, '--reporter',
@@ -83,14 +80,12 @@ def _lint_jscs(file_to_lint, lint_output):
                                                'data/jscs_terse_reporter.js')])
     return lint_output
 
-
 def _lint_jshint(file_to_lint, lint_output):
     jshint = shutil.which('jshint')
     lint_output.run_command([jshint, file_to_lint, '--reporter',
                              resource_filename(__name__,
                                                'data/jshint_terse_reporter.js')])
     return lint_output
-
 
 def _lint_pep8(file_to_lint, lint_output):
     reporter = PEP8TerseReporter()
@@ -101,7 +96,6 @@ def _lint_pep8(file_to_lint, lint_output):
     lint_output.output += reporter.output
     return lint_output
 
-
 def _lint_pyflakes(file_to_lint, lint_output):
     reporter = PyFlakesTerseReporter()
     num_problems = pyflakes.api.checkPath(file_to_lint, reporter=reporter)
@@ -109,7 +103,6 @@ def _lint_pyflakes(file_to_lint, lint_output):
         lint_output._warnings_present = True
     lint_output.output += reporter.output
     return lint_output
-
 
 def lint(file_to_lint):
     """Perform linting on a file according to its extension.
