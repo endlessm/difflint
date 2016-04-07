@@ -7,11 +7,10 @@ import re
 from subprocess import call, check_output
 from sys import stderr
 
-from .lint import get_missing_linters, lint
+from .lint import get_missing_configuration_files, get_missing_linters, lint
 
 LOG_FILE = 'lintdiff.log'
 MISSING_FILE_EXIT_CODE = 72  # os.EX_OSFILE is not portable
-
 
 def lint_list(file_list):
     """Lint every file in the list with a linter appropriate to its extension.
@@ -23,7 +22,6 @@ def lint_list(file_list):
              object.
     """
     return {f: lint(f) for f in file_list}
-
 
 def build_rename_dict():
     """Build a dictonary of the new filenames of renamed files.
@@ -53,7 +51,6 @@ def build_rename_dict():
         new_to_old[line_as_list[2]] = line_as_list[1]
     return new_to_old
 
-
 def build_file_list(mode_string):
     """Build a list of staged files matching certain diff-filter statuses.
 
@@ -74,11 +71,9 @@ def build_file_list(mode_string):
                                     '--diff-filter=' + mode_string])
     return list(git_diff_output.decode().split())
 
-
 def get_log_header():
     """Get a human-readable string header for the log file."""
     return str(datetime.utcnow().isoformat(' ')) + '\n'
-
 
 def diff_lint_outputs(past_mapping, current_mapping, log_output,
                       rename_mapping={}):
@@ -111,7 +106,6 @@ def diff_lint_outputs(past_mapping, current_mapping, log_output,
         log_output.write('\n\n\n')
         log_output.writelines(delta_generator)
 
-
 def report_defects_in_new_files(added_mapping, log_output):
     """Check LintOutput objects for the presence of warnings.
 
@@ -138,7 +132,6 @@ def report_defects_in_new_files(added_mapping, log_output):
         log_output.write(lint_output.output)
     return any_errors_introduced
 
-
 def finalize_log_output(log_output, any_new_errors):
     """Write the log to disk and print a message if there was something in it.
 
@@ -164,7 +157,6 @@ def finalize_log_output(log_output, any_new_errors):
             f.write(get_log_header())
             f.write(log_output.getvalue())
     log_output.close()
-
 
 def detect_new_diff_lint_errors(log_output):
     """Determine whether a linting diff indicates new errors.
@@ -204,7 +196,6 @@ def detect_new_diff_lint_errors(log_output):
             return True
     return False
 
-
 def main():
     parser = argparse.ArgumentParser(description='Linter that will examine ' +
                                      'only new changes as you commit them.')
@@ -213,17 +204,35 @@ def main():
                         'PATH. If some are missing, reports which ones.')
     args = parser.parse_args()
 
-    missing_files = get_missing_linters()
+    missing_configurations = get_missing_configuration_files()
+    
+    missing_linters = []
+
+    # We cannot find the missing_linters if any required configuration files
+    # are missing.
+    if not missing_configurations:
+        missing_linters = get_missing_linters()
 
     if args.check:
-        if not missing_files:
+        if not missing_linters and not missing_configurations:
             print('All configuration files and linting programs found.')
             return 0
-        print(', '.join(missing_files) + ' not found.')
+        for linter_dict in missing_linters:
+            print('Linter "' + linter_dict['linter'] + ' for the language "' +
+                  linter_dict['language'] + '" is enabled but not found.')
+        for missing_configuration in missing_configurations:
+            print('Configuration file "' + missing_configuration + '"' +
+                  ' is missing.')
         return MISSING_FILE_EXIT_CODE
+    
+    if missing_configurations:
+        stderr.write('Required configuration files missing. ' +
+                     'Run `difflint --check` for a list of missing ' +
+                     'configuration files.\n')
+        return 0
 
-    if missing_files:
-        stderr.write('Configuration and/or linting files missing. ' +
+    if missing_linters:
+        stderr.write('Required linting files missing. ' +
                      'Run `difflint --check` for a list of missing files.\n')
         return 0
 
