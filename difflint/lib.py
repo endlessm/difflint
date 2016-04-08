@@ -1,13 +1,13 @@
 import argparse
-from datetime import datetime
-from difflib import unified_diff
-from io import StringIO
-from os import getcwd, unlink
+import datetime
+import difflib
+import io
+import os
 import os.path
 import pathlib
 import re
-from subprocess import call, CalledProcessError, check_output, DEVNULL
-from sys import stderr
+import subprocess
+import sys
 
 from .lint import get_missing_configuration_files, get_missing_linters, lint
 
@@ -52,9 +52,9 @@ def build_rename_dict():
     Input: (none)
     Output: A dictionary of the form {new_name : old_name}
     """
-    git_diff_output = check_output(['git', 'diff', '--name-status',
-                                    '--staged', '--find-renames',
-                                    '--diff-filter=R'])
+    git_diff_output = subprocess.check_output(['git', 'diff', '--name-status',
+                                               '--staged', '--find-renames',
+                                               '--diff-filter=R'])
     # Has the format:
     #
     # R<NUM> <old-name> <new-name>
@@ -86,14 +86,14 @@ def build_file_list(mode_string):
     Output: A list of filenames that matched the git diff-filter
             criteria.
     """
-    git_diff_output = check_output(['git', 'diff', '--name-only',
-                                    '--staged', '--find-renames',
-                                    '--diff-filter=' + mode_string])
+    git_diff_output = subprocess.check_output(['git', 'diff', '--name-only',
+                                               '--staged', '--find-renames',
+                                               '--diff-filter=' + mode_string])
     return list(git_diff_output.decode().split())
 
 def get_log_header():
     """Get a human-readable string header for the log file."""
-    return str(datetime.utcnow().isoformat(' ')) + '\n'
+    return str(datetime.datetime.utcnow().isoformat(' ')) + '\n'
 
 def diff_lint_outputs(past_mapping, current_mapping, log_output,
                       rename_mapping={}):
@@ -120,9 +120,10 @@ def diff_lint_outputs(past_mapping, current_mapping, log_output,
             continue
         old_strings = past_mapping[old_name].get_split_output()
         new_strings = current_mapping[new_name].get_split_output()
-        delta_generator = unified_diff(old_strings, new_strings,
-                                       fromfile=old_name, tofile=new_name,
-                                       n=0)  # No lines of context
+        delta_generator = difflib.unified_diff(old_strings, new_strings,
+                                               fromfile=old_name,
+                                               tofile=new_name,
+                                               n=0)  # No lines of context
         log_output.write('\n\n\n')
         log_output.writelines(delta_generator)
 
@@ -167,12 +168,12 @@ def finalize_log_output(log_output, any_new_errors):
     """
     if not any_new_errors:
         try:
-            unlink(LOG_FILE)
+            os.unlink(LOG_FILE)
         except FileNotFoundError:
             pass
     else:
-        stderr.write('NOTICE: Check ' + LOG_FILE +
-                     ' for linting error details.\n')
+        sys.stderr.write('NOTICE: Check ' + LOG_FILE +
+                         ' for linting error details.\n')
         with open(LOG_FILE, 'w') as f:
             f.write(get_log_header())
             f.write(log_output.getvalue())
@@ -237,9 +238,10 @@ def save_merge_state():
     merge_head_commit_hash = ''
     try:
         # This will fail if MERGE_HEAD doesn't exist.
-        merge_head_commit_hash = check_output(['git', 'rev-parse', 'MERGE_HEAD'],
-                                              stderr=DEVNULL).decode()
-    except CalledProcessError:
+        merge_head_commit_hash = \
+            subprocess.check_output(['git', 'rev-parse', 'MERGE_HEAD'],
+                                    stderr=subprocess.DEVNULL).decode()
+    except subprocess.CalledProcessError:
         return ('', '')
 
     merge_msg = ''
@@ -298,14 +300,15 @@ def main():
         return MISSING_FILE_EXIT_CODE
     
     if missing_configurations:
-        stderr.write('Required configuration files missing. ' +
-                     'Run `difflint --check` for a list of missing ' +
-                     'configuration files.\n')
+        sys.stderr.write('Required configuration files missing. ' +
+                         'Run `difflint --check` for a list of missing ' +
+                         'configuration files.\n')
         return 0
 
     if missing_linters:
-        stderr.write('Required linting files missing. ' +
-                     'Run `difflint --check` for a list of missing files.\n')
+        sys.stderr.write('Required linting files missing. ' +
+                         'Run `difflint --check` for a list of missing ' +
+                         'files.\n')
         return 0
 
     all_staged_files = build_file_list('ACMR')
@@ -318,8 +321,8 @@ def main():
     merge_msg, merge_hash = save_merge_state()
 
     # Put all changes made that *are not* being committed in the stash.
-    call(['git', 'stash', 'save', '--keep-index', '--quiet',
-          '"pre-commit hook unstaged changes"'])
+    subprocess.call(['git', 'stash', 'save', '--keep-index', '--quiet',
+                     '"pre-commit hook unstaged changes"'])
 
     # Build a dictionary containing the filenames of copied and modified
     # files mapped to the output obtained from linting them.
@@ -342,8 +345,8 @@ def main():
 
     # Now, we'll roll back changes that *are* being committed as well to
     # get the baseline linting output.
-    call(['git', 'stash', 'save', '--quiet',
-          '"pre-commit hook staged changes"'])
+    subprocess.call(['git', 'stash', 'save', '--quiet',
+                     '"pre-commit hook staged changes"'])
 
     # We only lint the files that existed in the past and the present.
     # (We don't try to lint files that were deleted or added in the
@@ -354,14 +357,16 @@ def main():
     past_renamed_lint_mapping = lint_list(old_names_list)
 
     # Restore the changes that WILL NOT be committed first.
-    call(['git', 'stash', 'apply', '--index', '--quiet', 'stash@{1}'])
+    subprocess.call(['git', 'stash', 'apply', '--index', '--quiet',
+                     'stash@{1}'])
 
     # Restore the changes that WILL be committed now.
-    call(['git', 'stash', 'apply', '--index', '--quiet', 'stash@{0}'])
+    subprocess.call(['git', 'stash', 'apply', '--index', '--quiet',
+                     'stash@{0}'])
 
     # Remove both stash frames.
-    call(['git', 'stash', 'drop', '--quiet'])
-    call(['git', 'stash', 'drop', '--quiet'])
+    subprocess.call(['git', 'stash', 'drop', '--quiet'])
+    subprocess.call(['git', 'stash', 'drop', '--quiet'])
 
     # If the output from our save_merge_state wasn't an empty string,
     # we need to load the merge conflict state.
@@ -369,7 +374,7 @@ def main():
         restore_merge_state(merge_msg, merge_hash)
 
     # Compare the two linting output dictionaries of copied/modified files.
-    log_output = StringIO()
+    log_output = io.StringIO()
     diff_lint_outputs(past_modified_lint_mapping,
                       current_modified_lint_mapping, log_output)
 
