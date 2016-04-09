@@ -10,26 +10,10 @@ import subprocess
 import sys
 
 from .lint import get_missing_configuration_files, get_missing_linters, lint
+from .utils import repo_root
 
 LOG_FILE = 'lintdiff.log'
 MISSING_FILE_EXIT_CODE = 72  # os.EX_OSFILE is not portable
-
-def repo_root():
-    """Returns the root of the current repository. This is the directory
-    containing the .git directory for this repository.
-
-    Input: None
-
-    Output: A pathlib.Path object representing the root of this repository.
-    """
-    directory = pathlib.Path.cwd()
-    while directory.parent != directory.root:
-        if (directory / '.git').is_dir():
-            return directory
-        directory = directory.parent
-
-    raise FileNotFoundError("Could not find .git folder in any ancestor" +
-                            " directory.")
 
 def lint_list(file_list):
     """Lint every file in the list with a linter appropriate to its extension.
