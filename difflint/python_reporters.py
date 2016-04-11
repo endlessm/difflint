@@ -15,7 +15,7 @@ class PEP8TerseReporter(pep8.BaseReport):
     def error(self, line_number, offset, text, check):
         code = super(PEP8TerseReporter, self).error(line_number, offset, text,
                                                     check)
-        self.output += '{}|{}|{}\n'.format(self.filename, code, text)
+        self.output += '|{}|{}\n'.format(code, text)
         return code
 
 
@@ -30,11 +30,11 @@ class PyFlakesTerseReporter:
         self.output = ''
 
     def unexpectedError(self, filename, msg):
-        self.output += '{}|FATAL|{}'.format(filename, msg)
+        self.output += '|FATAL|{}'.format(msg)
 
     def syntaxError(self, filename, msg, lineno, offset, text):
-        self.output += '{}|SYNTAX|{}'.format(filename, msg)
+        self.output += '|SYNTAX|{}'.format(msg)
 
     def flake(self, message):
         message_text = message.message % message.message_args
-        self.output += '{}|FLAKE|{}'.format(message.filename, message_text)
+        self.output += '|FLAKE|{}'.format(message_text)

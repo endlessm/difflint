@@ -5,7 +5,7 @@
  */
 
 var resultToFullMessage = function (result) {
-    return result.file + "|" + result.error.code + "|" + result.error.reason;
+    return "|" + result.error.code + "|" + result.error.reason;
 };
 
 var compareResults = function (resultA, resultB) {

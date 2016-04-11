@@ -4,13 +4,13 @@
  * human consumption.
  */
 
-var errorToFullMessage = function (fname, error) {
-    return fname + "|" + error.rule + "|" + error.message;
+var errorToFullMessage = function (error) {
+    return "|" + error.rule + "|" + error.message;
 };
 
-var compareFullMessages = function (filename, errorA, errorB) {
-    var messageA = errorToFullMessage(filename, errorA);
-    var messageB = errorToFullMessage(filename, errorB);
+var compareFullMessages = function (errorA, errorB) {
+    var messageA = errorToFullMessage(errorA);
+    var messageB = errorToFullMessage(errorB);
     return messageA.localeCompare(messageB);
 };
 
@@ -18,9 +18,9 @@ module.exports = function (errorsCollection) {
     errorsCollection.forEach(function (errors) {
         var filename = errors.getFilename();
         var errorsList = errors.getErrorList().slice(); // Shallow copy
-        errorsList.sort(compareFullMessages.bind(null, filename));
+        errorsList.sort(compareFullMessages);
         errorsList.forEach(function (error) {
-            console.log(errorToFullMessage(filename, error));
+            console.log(errorToFullMessage(error));
         });
     });
 };
