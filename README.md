@@ -11,6 +11,7 @@ It's suitable for using as a Git pre-commit hook.
 
 ## Linters Supported ##
 
+- [ESLint](http://eslint.org) (Javascript)
 - [JSCS](http://jscs.info) (JavaScript -- Default)
 - [JSHint](http://jshint.com/docs) (JavaScript -- Default)
 - [PEP8](https://pypi.python.org/pypi/pep8) (Python -- Default)

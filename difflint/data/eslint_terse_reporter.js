@@ -5,14 +5,14 @@
  */
 
 var formatMessage = function (filename, message) {
-    var messageType = "warning";
-
     // These criteria match the criteria for displaying "error" in the default
     // reporter for eslint.
     if (message.fatal || message.severity === 2) {
-        messageType = "error";
+        var messageType = "error";
     }
-    
+    else {
+        var messageType = "warning";
+    }
     return filename + "|" + messageType + "|" + message.message;
 };
 
@@ -26,8 +26,12 @@ module.exports = function(results) {
     if (results.length === 0) {
         return "";
     }
+    else if (results.length > 1 {
+        throw new Error("Lint reporting applied to more " +
+                        "than one file at once!");
+    }
 
-    // We only apply this function to a single file at a time
+    // We only apply this function to a single file at a time,
     // so we should only have a single result.
     var result = results[0];
     var filePath = result.filePath;
