@@ -9,19 +9,19 @@ tracking down bugs with tools like `git blame` and `git bisect`.
 **Difflint** will check only the changes that you make in each commit.
 It's suitable for using as a Git pre-commit hook.
 
-## Linters supported ##
+## Linters Supported ##
 
-- [JSCS](http://jscs.info) (JavaScript)
-- [JSHint](http://jshint.com/docs) (JavaScript)
-- [PEP8](https://pypi.python.org/pypi/pep8) (Python)
-- [PyFlakes](https://pypi.python.org/pypi/pyflakes) (Python)
+- [JSCS](http://jscs.info) (JavaScript -- Default)
+- [JSHint](http://jshint.com/docs) (JavaScript -- Default)
+- [PEP8](https://pypi.python.org/pypi/pep8) (Python -- Default)
+- [PyFlakes](https://pypi.python.org/pypi/pyflakes) (Python -- Default)
 
 ## Requirements ##
 
 - Python 3.5 or later
-- JSCS
-- JSHint
-- NPM for installing JSCS and JSHint
+- NPM for installing default Javascript linters
+- JSCS (Installed/Enabled by default)
+- JSHint (Installed/Enabled by default)
 
 ## Installation ##
 
@@ -48,7 +48,41 @@ already there.
 You can check without committing by staging the files you wish to check
 (with `git add`) and running `difflint` without any arguments.
 
-## Configuration (optional) ##
+## Enable/Disable Linters (optional) ##
+
+Difflint allows you to specify which linters to use for particular
+file extensions. Any linters included in the section "Linters Supported"
+can be enabled or disabled. You can configure this by renaming the
+example.difflintrc file to .difflintrc and placing it in your repository's
+root level. Then you can change which file extensions belong to which
+groups of linters, disable some of the default linters, or add other
+linters that are not enabled by default.
+
+If you do not supply a .difflintrc file, default values for extensions
+and linters will be used. They can be found in the [default difflintrc file](difflint/data/.difflintrc).
+
+The format of the .difflintrc file is JSON and looks like the following:
+
+```js
+{
+    "<language_name>": {
+        "extensions": ["<file_extension_without_a_leading_dot_1>",
+                       "<file_extension_without_a_leading_dot_2>"],
+        "linters": ["<linter_executable_name_1>",
+                    "<linter_executable_name_2>"]
+    }
+}
+```
+
+Here the <language_name> could be something like "python" or "javascript".
+It is not used in the linting process but will help generate useful error
+messages if you forgot to install one of the linters you associated with it.
+
+The <file_extension_without_a_leading_dot> could be "py" or "pyw". Example
+linter executable names are "pep8" and "jscs". You are free to mix and match
+groupings/extensions/linters as best fits your workflow.
+
+## Linter Specific Configuration (optional) ##
 
 If you don't want JSCS and JSHint's default settings, create `.jscsrc`
 and `.jshintrc` files where JSCS and JSHint can find them.

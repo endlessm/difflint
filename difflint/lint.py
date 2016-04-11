@@ -1,20 +1,41 @@
 # Copyright 2015 Endless Mobile, Inc.
 
+import functools
 import json
 import os.path
+import pathlib
 import pep8
 from pkg_resources import resource_filename
 import pyflakes.api
 import shutil
+import sys
 
 from .lint_output import LintOutput
 from .python_reporters import PEP8TerseReporter, PyFlakesTerseReporter
+from .utils import repo_root
 
-_ENABLED_LINTERS_CONFIG = resource_filename(__name__, 'data/.difflintrc')
+@functools.lru_cache()
+def _get_enabled_linters_config_path():
+    """Returns the path of the file describing which linters are enabled
+    based upon whether a custom, repository-specific file exists.
 
+    Inputs: None
+
+    Output: A patlib.Path object.
+    """
+    custom_path = repo_root() / '.difflintrc'
+    if custom_path.is_file():
+        return custom_path
+    return pathlib.Path(resource_filename(__name__, 'data/.difflintrc'))
+
+@functools.lru_cache()
 def _read_enabled_linters_config():
     """Reads from the configuration file to determine which linters
-    should be used for which file extensions.
+    should be used for which file extensions. This will first attempt
+    to read from a custom configuration file specific to the current
+    repository. If it cannot find one, it will fall back on the
+    default. If the custom file is not valid JSON, this will raise
+    an exception.
 
     Inputs: None
 
@@ -34,8 +55,17 @@ def _read_enabled_linters_config():
         }
     }
     """
-    with open(_ENABLED_LINTERS_CONFIG, 'r') as config:
-        return json.load(config)
+    config_path = _get_enabled_linters_config_path()
+
+    try:
+        with config_path.open() as config:
+            return json.load(config)
+    except ValueError as ve:
+        sys.stderr.write("Failed to parse custom .difflintrc file. " +
+                         "Make sure the file is valid JSON or remove " +
+                         "the file and fall back on the default " +
+                         "configuration.\n")
+        raise ve
 
 def get_missing_configuration_files():
     """Check that all mandatory configuration files for difflint are
@@ -48,8 +78,9 @@ def get_missing_configuration_files():
             configuration files were found.
     """
     missing_configuration_files = []
-    if not os.path.isfile(_ENABLED_LINTERS_CONFIG):
-        missing_configuration_files.append(_ENABLED_LINTERS_CONFIG)
+    linter_enabled_config = _get_enabled_linters_config_path()
+    if not linter_enabled_config.is_file():
+        missing_configuration_files.append(linter_enabled_config)
     return missing_configuration_files
 
 def get_missing_linters():
@@ -116,6 +147,8 @@ def lint(file_to_lint):
     # Strip the leading period to match the format in the configuration file.
     ext = ext[1:]
 
+    # This value is cached across function calls, so it is not expensive to
+    # continue reading this configuration for every file.
     config = _read_enabled_linters_config()
 
     linters_to_run = []
