@@ -74,11 +74,11 @@ The format of the .difflintrc file is JSON and looks like the following:
 }
 ```
 
-Here the <language_name> could be something like "python" or "javascript".
+Here the `<language_name>` could be something like "python" or "javascript".
 It is not used in the linting process but will help generate useful error
 messages if you forgot to install one of the linters you associated with it.
 
-The <file_extension_without_a_leading_dot> could be "py" or "pyw". Example
+The `<file_extension_without_a_leading_dot>` could be "py" or "pyw". Example
 linter executable names are "pep8" and "jscs". You are free to mix and match
 groupings/extensions/linters as best fits your workflow.
 
