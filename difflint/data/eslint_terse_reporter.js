@@ -35,9 +35,8 @@ module.exports = function(results) {
     // so we should only have a single result.
     var result = results[0];
     var filePath = result.filePath;
-    var messageList = result.messages.slice(); // Shallow copy.
-    messageList.sort(compareMessages.bind(null, filePath));
-    messageList.forEach(function (message) {
-        console.log(formatMessage(filePath, message));
-    });
+    var messageList = result.messages.map(msg => formatMessage(filePath, msg)).sort();
+    messageList.forEach(function (msg) {
+        console.log(msg);
+    }
 };
