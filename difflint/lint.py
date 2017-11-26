@@ -104,6 +104,13 @@ def get_missing_linters():
                                         'linter': linter})
     return missing_linters
 
+def _lint_eslint(file_to_lint, lint_output):
+    eslint = shutil.which('eslint')
+    lint_output.run_command([eslint, file_to_lint, '--format',
+                             resource_filename(__name__,
+                                               'data/eslint_terse_reporter.js')])
+    return lint_output
+
 def _lint_jscs(file_to_lint, lint_output):
     jscs = shutil.which('jscs')
     lint_output.run_command([jscs, file_to_lint, '--reporter',
@@ -160,7 +167,9 @@ def lint(file_to_lint):
 
     # Other file extensions/linters must be added here if they are to be used.
     for linter in linters_to_run:
-        if linter == 'jshint':
+        if linter == 'eslint':
+            output = _lint_eslint(file_to_lint, output)
+        elif linter == 'jshint':
             output = _lint_jshint(file_to_lint, output)
         elif linter == 'jscs':
             output = _lint_jscs(file_to_lint, output)
